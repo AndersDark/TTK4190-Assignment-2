@@ -58,15 +58,20 @@ Nrdot = -2.4283e10;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Add added mass here
+M_A = -[Xudot, 0, 0;
+        0, Yvdot, Yrdot;
+        0, Yrdot, Nrdot];
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % rigid-body mass matrix
 MRB = [ m 0    0 
         0 m    m*xg
         0 m*xg Iz ];
-Minv = invQR(MRB);
 
-% input matrix
+M = MRB + M_A;
+Minv = invQR(M);
+
+% input atrix
 t_thr = 0.05;           % thrust deduction number
 X_delta2 = 0;         % rudder coefficients (Section 9.5)
 Y_delta = 0;      
@@ -82,14 +87,58 @@ CRB = m * nu(3) * [ 0 -1 -xg
                 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Add Coriolis due to added mass here
+a1 = Xudot*nu(1);
+a2 = Yvdot*nu(2) + Yrdot*nu(3);
+C_A = [0 0 a2;
+       0 0 -a1;
+       -a2 a1 0];
+
+CRB = CRB + C_A;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Add linear damping here
+T1 = 20;
+T2 = 20;
+T6 = 10;
+
+Xu = - (m-Xudot)/T1;
+Yv = - (m-Yvdot)/T2;
+Nr = - (Iz - Nrdot)/T6;
+
+D = -diag([Xu,Yv,Nr]);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Add nonlinear damping here
+% surge damping
+R_n = L*10^6*abs(nu(1));
+epsilon = 0.001;
+CR = 0;
+
+CF = (log10(R_n)-2)^2 + epsilon;
+C_f = 0.075 / CF + CR;
+
+S = L*B + 2*B*T + 2*L*T;
+k = 0.1;
+
+X = -1/2*rho*S*(k+1)*C_f*nu(1)*abs(nu(1));
+
+% cross-flow drag
+
+Cd_2D = Hoerner(B, T);
+Ycf = 0;
+Ncf = 0;
+
+dx = L/10; % 10 strips
+for xL = -L/2:dx:L/2
+    Ucf = abs(nu(2) + xL * nu(3)) * (nu(2) + xL * nu(3));
+    Ycf = Ycf - 0.5 * rho * T * Cd_2D * Ucf * dx; % sway force
+    Ncf = Ncf - 0.5 * rho * T * Cd_2D * xL * Ucf * dx; % yaw moment
+end
+
+D_nonLin = -diag([X,Ycf,Ncf]);
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 R = Rzyx(0,0,eta(3));
@@ -100,7 +149,7 @@ thr = rho * Dia^4 * KT * abs(n) * n;    % thrust command (N)
 % ship dynamics
 u = [ thr delta ]';
 tau = Bi * u;
-nu_dot = Minv * (tau - CRB * nu); 
+nu_dot = Minv * (tau - (CRB + D + D_nonLin) * nu); 
 eta_dot = R * nu;    
 
 % Rudder saturation and dynamics (Sections 9.5.2)

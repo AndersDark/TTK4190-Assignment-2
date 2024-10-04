@@ -40,8 +40,16 @@ for i = 1:nTimeSteps
     u_d = u_ref;
         
     % control law
-    delta_c = 0.1;              % rudder angle command (rad)
-    n_c = 10;                   % propeller speed (rps)
+    delta_c = 0;              % rudder angle command (rad)
+    n_c = 0;                   % propeller speed (rps)
+
+    % if t(i) > T_final/3
+    %     delta_c = 0.5;
+    % end
+
+    if t(i) > T_final/3
+        n_c = 20;
+    end
     
     % ship dynamics
     u = [delta_c n_c]';

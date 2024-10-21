@@ -14,7 +14,7 @@ T_final = 1000;	        % Final simulation time (s)
 h = 0.1;                % Sampling time (s)
 
 psi_ref = 10 * pi/180;  % desired yaw angle (rad)
-U_ref   = 7;            % desired surge speed (m/s)
+U_ref   = 9;            % desired surge speed (m/s)
 
 % initial states
 eta_0 = [0 0 0]';
@@ -23,7 +23,8 @@ delta_0 = 0;
 n_0 = 0;
 xd = [0 0 0]';
 e_int = 0;
-x = [nu_0' eta_0' delta_0 n_0]'; % The state vector can be extended with addional states here
+Qm_0 = 0;
+x = [nu_0' eta_0' delta_0 n_0 Qm_0]'; % The state vector can be extended with addional states here
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % MAIN LOOP
@@ -87,9 +88,10 @@ for i = 1:nTimeSteps
     % psi_d = xd(1);
     % r_d = xd(2);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    if t(i) > 400
-        psi_ref = -20 * pi/180;
-    end
+
+    % if t(i) > 400
+    %     psi_ref = -20 * pi/180;
+    % end
 
     xd_dot = ref_model(xd,psi_ref);
     xd = xd + xd_dot * h;
@@ -105,11 +107,12 @@ for i = 1:nTimeSteps
     %
     % The result should look like this:
     % delta_c = PID_heading(e_psi,e_r,e_int);
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
     e_psi = ssa(x(6)-psi_d);
     e_r   = x(3) - r_d;
     e_int = e_int + e_psi * h;
     delta_c = PID_heading(e_psi,e_r,e_int); % rudder angle command (rad)
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Part 3, 1e) Add open loop speed control here
@@ -118,7 +121,7 @@ for i = 1:nTimeSteps
     % The result should look like this:
     % n_c = open_loop_speed_control(U_ref);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    n_c = 10;                   % propeller speed [radians per second (rps)]
+    n_c = open_loop_speed_control(U_ref);                   % propeller speed [radians per second (rps)]
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Part 3, 1f) Replace the open loop speed controller, 
@@ -194,32 +197,32 @@ sideslip_angle = (180/pi) * atan2(v-vc,u-uc);
 
 figure(3)
 figure(gcf)
-% subplot(311)
-% plot(y,x,'linewidth',2); axis('equal')
-% title('North-East positions'); xlabel('(m)'); ylabel('(m)'); 
-subplot(211)
+subplot(311)
+plot(y,x,'linewidth',2); axis('equal')
+title('North-East positions'); xlabel('(m)'); ylabel('(m)'); 
+subplot(312)
 plot(t,psi_deg,t,psi_d_deg,'linewidth',2);
 title('Actual and desired yaw angle'); xlabel('Time (s)');  ylabel('Angle (deg)'); 
 legend('actual yaw','desired yaw')
-subplot(212)
+subplot(313)
 plot(t,r_deg,t,r_d_deg,'linewidth',2);
 title('Actual and desired yaw rates'); xlabel('Time (s)');  ylabel('Angle rate (deg/s)'); 
 legend('actual yaw rate','desired yaw rate')
 
 figure(2)
 figure(gcf)
-% subplot(311)
-% plot(t,u,t,u_d,'linewidth',2);
-% title('Actual and desired surge velocity'); xlabel('Time (s)'); ylabel('Velocity (m/s)');
-% legend('actual surge','desired surge')
-% subplot(211)
-% plot(t,n,t,n_c,'linewidth',2);
-% title('Actual and commanded propeller speed'); xlabel('Time (s)'); ylabel('Motor speed (RPM)');
-% legend('actual RPM','commanded RPM')
-% subplot(212)
-plot(t,delta_deg,t,delta_c_deg,'linewidth',2);
-title('Actual and commanded rudder angle'); xlabel('Time (s)'); ylabel('Angle (deg)');
-legend('actual rudder angle','commanded rudder angle')
+subplot(211)
+plot(t,u,t,u_d,'linewidth',2);
+title('Actual and desired surge velocity'); xlabel('Time (s)'); ylabel('Velocity (m/s)');
+legend('actual surge','desired surge')
+subplot(212)
+plot(t,n,t,n_c,'linewidth',2);
+title('Actual and commanded propeller speed'); xlabel('Time (s)'); ylabel('Motor speed (RPM)');
+legend('actual RPM','commanded RPM')
+% subplot(313)
+% plot(t,delta_deg,t,delta_c_deg,'linewidth',2);
+% title('Actual and commanded rudder angle'); xlabel('Time (s)'); ylabel('Angle (deg)');
+% legend('actual rudder angle','commanded rudder angle')
 %% Create objects for 3-D visualization 
 % Since we only simulate 3-DOF we need to construct zero arrays for the 
 % excluded dimensions, including height, roll and pitch

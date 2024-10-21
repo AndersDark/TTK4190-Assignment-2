@@ -31,7 +31,7 @@ function [xdot,u] = ship(x,u,nu_c,tau_ext)
 % Date:      date
 
 % Check of input and state dimensions
-if (length(x)~= 8),error('x-vector must have dimension 8 !');end
+if (length(x)~= 9),error('x-vector must have dimension 8 !');end
 if (length(u)~= 2),error('u-vector must have dimension 2 !');end
 
 % Dimensional states and input
@@ -42,6 +42,7 @@ nu    = x(1:3);
 eta   = x(4:6);
 delta = x(7);
 n     = x(8); 
+Qm    = x(9);
 
 nu_r = nu - nu_c;
 uc = nu_c(1);
@@ -64,6 +65,11 @@ rho = 1025;             % density of water (m/s^3)
 %
 % The result should look like this:
 % [KT,KQ] = wageningen(...);
+J_a = 0;
+PD = 1.5;
+AEAO = 0.65;
+num_blades = 4;
+[KT,KQ] = wageningen(J_a,PD,AEAO,num_blades);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % rudder limitations
@@ -143,11 +149,10 @@ d = -[Xns Ycf Ncf]';
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Part 3, 1b) compute thrust and torque here
-%
-% thr = ....
-% Q = ....
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 thr = rho * Dia^4 * KT * abs(n) * n;    % thrust command (N)
+Q = rho * Dia^5 * KQ * abs(n) * n;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % ship dynamics
 R = Rzyx(0,0,eta(3));
@@ -171,9 +176,18 @@ end
 %
 % the result should look like this:
 % n_dot =  .... (computed as function of torque)
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-n_dot = (1/10) * (n_c - n);
 
-xdot = [nu_dot' eta_dot' delta_dot n_dot]';
+Qd = rho * Dia^5 * KQ * abs(n_c) * n_c;
+
+I_m = 100000;
+K_m = 0.6;
+T_m = 10;
+tau = 0;
+
+n_dot = 1/I_m*(Qm-Q);
+Qm_dot = 1/T_m * (Qd-Qm);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+xdot = [nu_dot' eta_dot' delta_dot n_dot Qm_dot]';
 u = [delta_c n_c]';
 end

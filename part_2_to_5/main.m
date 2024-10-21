@@ -21,6 +21,8 @@ eta_0 = [0 0 0]';
 nu_0  = [0 0 0]';
 delta_0 = 0;
 n_0 = 0;
+xd = [0 0 0]';
+e_int = 0;
 x = [nu_0' eta_0' delta_0 n_0]'; % The state vector can be extended with addional states here
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -29,7 +31,7 @@ x = [nu_0' eta_0' delta_0 n_0]'; % The state vector can be extended with addiona
 t = 0:h:T_final;                % Time vector
 nTimeSteps = length(t);         % Number of time steps
 
-simdata = zeros(nTimeSteps, 13); % Pre-allocate matrix for efficiency
+simdata = zeros(nTimeSteps, 15); % Pre-allocate matrix for efficiency
 wait_bar = waitbar(0, 'Starting');
 
 for i = 1:nTimeSteps
@@ -37,16 +39,43 @@ for i = 1:nTimeSteps
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Part 2, 1a) Add current here 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    uc = 0;
-    vc = 0;
+    V_c = 1;
+    beta_vc = deg2rad(45);
+    psi = x(6);
+    uc = V_c*cos(beta_vc-psi);
+    vc = V_c*sin(beta_vc-psi);
     nu_c = [ uc vc 0 ]';
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Part 2, 1c) Add wind here 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    Ywind = 0;
-    Nwind = 0;
-    tau_wind = [0 Ywind Nwind]';
+    V_w = 10;
+    beta_vw = deg2rad(135);
+    rho_a = 1247;
+    c_y = 0.95;
+    c_n = 0.15;
+    L_oa = 161; % boat length = 161m
+    A_lw = 10*L_oa;
+
+    gamma_w = psi-beta_vw-pi;
+
+    C_Y = c_y*sin(gamma_w);
+    C_N = c_n*sin(2*gamma_w);
+
+    Ywind = C_Y*A_lw;
+    Nwind = C_N*A_lw*L_oa;
+
+    % Vessel speed
+    U = sqrt(x(1)^2+x(2)^2);
+    % Relative wind speed
+    V_rw = U - V_w;
+
+    if (t(i) < 200)
+        Ywind = 0;
+        Nwind = 0;
+    end
+
+    tau_wind = 1/2*rho_a*V_rw*[0 Ywind Nwind]';
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Part 2, 2d) Add a reference model here 
@@ -58,8 +87,16 @@ for i = 1:nTimeSteps
     % psi_d = xd(1);
     % r_d = xd(2);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    psi_d = psi_ref;
-    r_d = 0;
+    if t(i) > 400
+        psi_ref = -20 * pi/180;
+    end
+
+    xd_dot = ref_model(xd,psi_ref);
+    xd = xd + xd_dot * h;
+
+    psi_d = xd(1);
+    r_d = xd(2);
+
     u_d = U_ref;
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -69,7 +106,10 @@ for i = 1:nTimeSteps
     % The result should look like this:
     % delta_c = PID_heading(e_psi,e_r,e_int);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    delta_c = 0.1;              % rudder angle command (rad)
+    e_psi = ssa(x(6)-psi_d);
+    e_r   = x(3) - r_d;
+    e_int = e_int + e_psi * h;
+    delta_c = PID_heading(e_psi,e_r,e_int); % rudder angle command (rad)
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Part 3, 1e) Add open loop speed control here
@@ -94,7 +134,7 @@ for i = 1:nTimeSteps
     [xdot,u] = ship(x,u,nu_c,tau_wind);
     
     % store simulation data in a table (for testing)
-    simdata(i,:) = [x(1:3)' x(4:6)' x(7) x(8) u(1) u(2) u_d psi_d r_d];     
+    simdata(i,:) = [x(1:3)' x(4:6)' x(7) x(8) u(1) u(2) u_d psi_d r_d uc vc];     
  
     % Euler integration
     % x = euler2(xdot,x,h); 
@@ -126,32 +166,57 @@ psi_d       = simdata(:,12);                % rad
 psi_d_deg   = (180/pi) * psi_d;             % deg
 r_d         =  simdata(:,13);               % rad/s
 r_d_deg     = (180/pi) * r_d;               % deg/s
+%% custom variables
+uc = simdata(:,14);
+vc = simdata(:,15);
+crab_angle = (180/pi) * atan2(v,u);
+sideslip_angle = (180/pi) * atan2(v-vc,u-uc);
 %%
+% figure(5)
+% figure(gcf)
+% hold on;
+% plot(t,v-vc,'LineWidth',2')
+% plot(t,u-uc,'LineStyle','--','LineWidth',2)
+% title('Crab angle and Sideslip angle');
+% xlabel('Time (s)');  ylabel('Angle (deg)'); 
+% legend('v-vc','u-uc')
+% 
+% 
+% figure(4)
+% figure(gcf)
+% hold on;
+% plot(t,sideslip_angle,'LineWidth',2')
+% plot(t,crab_angle,'LineStyle','--','LineWidth',2)
+% title('Crab angle and Sideslip angle');
+% xlabel('Time (s)');  ylabel('Angle (deg)'); 
+% legend('Crab angle','Sideslip angle')
+
+
 figure(3)
 figure(gcf)
-subplot(311)
-plot(y,x,'linewidth',2); axis('equal')
-title('North-East positions'); xlabel('(m)'); ylabel('(m)'); 
-subplot(312)
+% subplot(311)
+% plot(y,x,'linewidth',2); axis('equal')
+% title('North-East positions'); xlabel('(m)'); ylabel('(m)'); 
+subplot(211)
 plot(t,psi_deg,t,psi_d_deg,'linewidth',2);
 title('Actual and desired yaw angle'); xlabel('Time (s)');  ylabel('Angle (deg)'); 
 legend('actual yaw','desired yaw')
-subplot(313)
+subplot(212)
 plot(t,r_deg,t,r_d_deg,'linewidth',2);
 title('Actual and desired yaw rates'); xlabel('Time (s)');  ylabel('Angle rate (deg/s)'); 
 legend('actual yaw rate','desired yaw rate')
 
 figure(2)
 figure(gcf)
-subplot(311)
-plot(t,u,t,u_d,'linewidth',2);
-title('Actual and desired surge velocity'); xlabel('Time (s)'); ylabel('Velocity (m/s)');
-legend('actual surge','desired surge')
-subplot(312)
-plot(t,n,t,n_c,'linewidth',2);
-title('Actual and commanded propeller speed'); xlabel('Time (s)'); ylabel('Motor speed (RPM)');
-legend('actual RPM','commanded RPM')
-subplot(313)
+% subplot(311)
+% plot(t,u,t,u_d,'linewidth',2);
+% title('Actual and desired surge velocity'); xlabel('Time (s)'); ylabel('Velocity (m/s)');
+% legend('actual surge','desired surge')
+% subplot(211)
+% plot(t,n,t,n_c,'linewidth',2);
+% title('Actual and commanded propeller speed'); xlabel('Time (s)'); ylabel('Motor speed (RPM)');
+% legend('actual RPM','commanded RPM')
+% subplot(212)
 plot(t,delta_deg,t,delta_c_deg,'linewidth',2);
 title('Actual and commanded rudder angle'); xlabel('Time (s)'); ylabel('Angle (deg)');
 legend('actual rudder angle','commanded rudder angle')

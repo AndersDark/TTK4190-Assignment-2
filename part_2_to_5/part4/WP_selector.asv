@@ -10,8 +10,6 @@ function [xk1,yk1,xk,yk, last] = WP_selector(x_pos,y_pos)
         waypoints = load('WP.mat').WP;
     end
 
-    last = 0;
-
     current_wp = waypoints(:,wp_index);
     next_wp = waypoints(:,wp_index+1);
 
@@ -29,7 +27,11 @@ function [xk1,yk1,xk,yk, last] = WP_selector(x_pos,y_pos)
             current_wp = next_wp;
             next_wp = waypoints(:,wp_index+1);
         else
-            last = 1;
+            xk1 = next_wp(1);
+            yk1 = next_wp(2);
+            xk = next_wp(1);
+            yk = next_wp(2);
+            return
         end
     end
 

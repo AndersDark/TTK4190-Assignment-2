@@ -18,7 +18,7 @@ psi_ref = 0;  % desired yaw angle (rad)
 U_ref   = 9;            % desired surge speed (m/s)
 
 % initial states
-eta_0 = [0 0 deg2rad(-110)]';
+eta_0 = [0 0 deg2rad(-60)]';
 nu_0  = [0 0 0]';
 delta_0 = 0;
 n_0 = 0;
@@ -88,11 +88,7 @@ for i = 1:nTimeSteps
     % Guidance law
     [xk1,yk1,xk,yk,last_waypoint_reached] = WP_selector(x(4),x(5));
     [e_y, pi_p] = cross_track_error(xk1,yk1,xk,yk,x(4),x(5));
-    chi_d = LOS_guidance(e_y, pi_p);
-
-    % Crab angle compensation
-    crab_angle = atan2(x(2),x(1));
-    psi_ref = chi_d - crab_angle;
+    psi_ref = LOS_guidance(e_y, pi_p);
 
     % Refrence model
     xd_dot = ref_model(xd,psi_ref);
@@ -192,17 +188,14 @@ plot(t,crab_angle,'LineStyle','--','LineWidth',2)
 title('Crab angle and Sideslip angle');
 xlabel('Time (s)');  ylabel('Angle (deg)'); 
 legend('Sideslip angle','Crab angle')
-grid on;
 
 figure(3)
 figure(gcf)
 hold on;
-plot(t,psi_d_deg,'linewidth',2); % course angle desired
-plot(t,psi_deg+crab_angle,'LineWidth',2); %course angle
-plot(t,psi_deg,'linewidth',2); % Heading
-xlabel('Time (s)');  ylabel('Angle (deg)'); 
-legend('desired course angle','course angle','Heading angle')
-grid on;
+plot(t,psi_deg,t,psi_d_deg,'linewidth',2);
+plot(t,psi_deg+crab_angle,'LineWidth',2,)
+title('Actual and desired yaw angle'); xlabel('Time (s)');  ylabel('Angle (deg)'); 
+legend('Heading angle','desired course angle')
 
 
 % figure(3)

@@ -2,7 +2,7 @@ function xd_dot = ref_model(xd,psi_ref)
 %REF_MODEL Summary of this function goes here
 %   Detailed explanation goes here
 
-w_ref = 0.03;
+w_ref = 0.08;
 zeta = 1;
 
 a1 = w_ref + 2*zeta*w_ref;

@@ -19,10 +19,11 @@ function [xk1,yk1,xk,yk] = WP_selector(x_pos,y_pos)
 
     error = distance_to_next' * distance_to_next;
 
-    if error < 161*2 % two ship lengths
+    fprintf("Index: %d, error: %d \n",wp_index,error)
+
+    if error < (161*2)^2 % two ship lengths
         if wp_index < (size(waypoints,2)-1)
             wp_index = wp_index + 1;
-            fprintf("Index: %d, x_pos: %d, y_pos: %d", wp_index, x_pos, y_pos)
             current_wp = next_wp;
             next_wp = waypoints(:,wp_index+1);
         end

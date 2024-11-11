@@ -10,7 +10,8 @@ addpath(genpath('flypath3d_v2'))
 % USER INPUTS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clc; clear; close all;
-T_final = 5000;	        % Final simulation time (s)
+clear WP_selector;
+T_final = 3000;	        % Final simulation time (s)
 h = 0.1;                % Sampling time (s)
 
 psi_ref = deg2rad(-110);  % desired yaw angle (rad)
@@ -199,34 +200,35 @@ pathplotter(x,y)
 % legend('Crab angle','Sideslip angle')
 
 
-% figure(3)
-% figure(gcf)
-% subplot(311)
-% plot(y,x,'linewidth',2); axis('equal')
-% title('North-East positions'); xlabel('(m)'); ylabel('(m)'); 
-% subplot(312)
-% plot(t,psi_deg,t,psi_d_deg,'linewidth',2);
-% title('Actual and desired yaw angle'); xlabel('Time (s)');  ylabel('Angle (deg)'); 
-% legend('actual yaw','desired yaw')
-% subplot(313)
-% plot(t,r_deg,t,r_d_deg,'linewidth',2);
-% title('Actual and desired yaw rates'); xlabel('Time (s)');  ylabel('Angle rate (deg/s)'); 
-% legend('actual yaw rate','desired yaw rate')
+figure(3)
+figure(gcf)
+subplot(311)
+plot(y,x,'linewidth',2); axis('equal')
+title('North-East positions'); xlabel('(m)'); ylabel('(m)'); 
+subplot(312)
+plot(t,psi_deg,t,psi_d_deg,'linewidth',2);
+title('Actual and desired yaw angle'); xlabel('Time (s)');  ylabel('Angle (deg)'); 
+legend('actual yaw','desired yaw')
+subplot(313)
+plot(t,r_deg,t,r_d_deg,'linewidth',2);
+title('Actual and desired yaw rates'); xlabel('Time (s)');  ylabel('Angle rate (deg/s)'); 
+legend('actual yaw rate','desired yaw rate')
 
-% figure(2)
-% figure(gcf)
-% subplot(211)
-% plot(t,u,t,u_d,'linewidth',2);
-% title('Actual and desired surge velocity'); xlabel('Time (s)'); ylabel('Velocity (m/s)');
-% legend('actual surge','desired surge')
-% subplot(212)
-% plot(t,n,t,n_c,'linewidth',2);
-% title('Actual and commanded propeller speed'); xlabel('Time (s)'); ylabel('Motor speed (RPM)');
-% legend('actual RPM','commanded RPM')
-% subplot(313)
-% plot(t,delta_deg,t,delta_c_deg,'linewidth',2);
-% title('Actual and commanded rudder angle'); xlabel('Time (s)'); ylabel('Angle (deg)');
-% legend('actual rudder angle','commanded rudder angle')
+figure(2)
+figure(gcf)
+subplot(211)
+plot(t,u,t,u_d,'linewidth',2);
+title('Actual and desired surge velocity'); xlabel('Time (s)'); ylabel('Velocity (m/s)');
+legend('actual surge','desired surge')
+subplot(212)
+plot(t,n,t,n_c,'linewidth',2);
+title('Actual and commanded propeller speed'); xlabel('Time (s)'); ylabel('Motor speed (RPM)');
+legend('actual RPM','commanded RPM')
+subplot(313)
+plot(t,delta_deg,t,delta_c_deg,'linewidth',2);
+title('Actual and commanded rudder angle'); xlabel('Time (s)'); ylabel('Angle (deg)');
+legend('actual rudder angle','commanded rudder angle')
+
 %% Create objects for 3-D visualization 
 % Since we only simulate 3-DOF we need to construct zero arrays for the 
 % excluded dimensions, including height, roll and pitch

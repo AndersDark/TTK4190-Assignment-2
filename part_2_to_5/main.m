@@ -10,14 +10,14 @@ addpath(genpath('flypath3d_v2'))
 % USER INPUTS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clc; clear; close all;
-T_final = 1000;	        % Final simulation time (s)
+T_final = 5000;	        % Final simulation time (s)
 h = 0.1;                % Sampling time (s)
 
-psi_ref = 10 * pi/180;  % desired yaw angle (rad)
+psi_ref = deg2rad(-110);  % desired yaw angle (rad)
 U_ref   = 9;            % desired surge speed (m/s)
 
 % initial states
-eta_0 = [0 0 0]';
+eta_0 = [0 0 deg2rad(-110)]';
 nu_0  = [0 0 0]';
 delta_0 = 0;
 n_0 = 0;
@@ -89,10 +89,12 @@ for i = 1:nTimeSteps
     % r_d = xd(2);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    % if t(i) > 400
-    %     psi_ref = -20 * pi/180;
-    % end
+    % Guidance law
+    [xk1,yk1,xk,yk] = WP_selector(x(4),x(5));
+    [e_y, pi_p] = cross_track_error(xk1,yk1,xk,yk,x(4),x(5));
+    psi_ref = LOS_guidance(e_y, pi_p);
 
+    % Refrence model
     xd_dot = ref_model(xd,psi_ref);
     xd = xd + xd_dot * h;
 
@@ -110,7 +112,7 @@ for i = 1:nTimeSteps
 
     e_psi = ssa(x(6)-psi_d);
     e_r   = x(3) - r_d;
-    e_int = e_int + e_psi * h;
+    e_int = 0;%e_int + e_psi * h;
     delta_c = PID_heading(e_psi,e_r,e_int); % rudder angle command (rad)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -174,7 +176,9 @@ uc = simdata(:,14);
 vc = simdata(:,15);
 crab_angle = (180/pi) * atan2(v,u);
 sideslip_angle = (180/pi) * atan2(v-vc,u-uc);
-%%
+
+%% Ploting
+pathplotter(x,y)
 % figure(5)
 % figure(gcf)
 % hold on;
@@ -195,30 +199,30 @@ sideslip_angle = (180/pi) * atan2(v-vc,u-uc);
 % legend('Crab angle','Sideslip angle')
 
 
-figure(3)
-figure(gcf)
-subplot(311)
-plot(y,x,'linewidth',2); axis('equal')
-title('North-East positions'); xlabel('(m)'); ylabel('(m)'); 
-subplot(312)
-plot(t,psi_deg,t,psi_d_deg,'linewidth',2);
-title('Actual and desired yaw angle'); xlabel('Time (s)');  ylabel('Angle (deg)'); 
-legend('actual yaw','desired yaw')
-subplot(313)
-plot(t,r_deg,t,r_d_deg,'linewidth',2);
-title('Actual and desired yaw rates'); xlabel('Time (s)');  ylabel('Angle rate (deg/s)'); 
-legend('actual yaw rate','desired yaw rate')
+% figure(3)
+% figure(gcf)
+% subplot(311)
+% plot(y,x,'linewidth',2); axis('equal')
+% title('North-East positions'); xlabel('(m)'); ylabel('(m)'); 
+% subplot(312)
+% plot(t,psi_deg,t,psi_d_deg,'linewidth',2);
+% title('Actual and desired yaw angle'); xlabel('Time (s)');  ylabel('Angle (deg)'); 
+% legend('actual yaw','desired yaw')
+% subplot(313)
+% plot(t,r_deg,t,r_d_deg,'linewidth',2);
+% title('Actual and desired yaw rates'); xlabel('Time (s)');  ylabel('Angle rate (deg/s)'); 
+% legend('actual yaw rate','desired yaw rate')
 
-figure(2)
-figure(gcf)
-subplot(211)
-plot(t,u,t,u_d,'linewidth',2);
-title('Actual and desired surge velocity'); xlabel('Time (s)'); ylabel('Velocity (m/s)');
-legend('actual surge','desired surge')
-subplot(212)
-plot(t,n,t,n_c,'linewidth',2);
-title('Actual and commanded propeller speed'); xlabel('Time (s)'); ylabel('Motor speed (RPM)');
-legend('actual RPM','commanded RPM')
+% figure(2)
+% figure(gcf)
+% subplot(211)
+% plot(t,u,t,u_d,'linewidth',2);
+% title('Actual and desired surge velocity'); xlabel('Time (s)'); ylabel('Velocity (m/s)');
+% legend('actual surge','desired surge')
+% subplot(212)
+% plot(t,n,t,n_c,'linewidth',2);
+% title('Actual and commanded propeller speed'); xlabel('Time (s)'); ylabel('Motor speed (RPM)');
+% legend('actual RPM','commanded RPM')
 % subplot(313)
 % plot(t,delta_deg,t,delta_c_deg,'linewidth',2);
 % title('Actual and commanded rudder angle'); xlabel('Time (s)'); ylabel('Angle (deg)');
@@ -226,22 +230,22 @@ legend('actual RPM','commanded RPM')
 %% Create objects for 3-D visualization 
 % Since we only simulate 3-DOF we need to construct zero arrays for the 
 % excluded dimensions, including height, roll and pitch
-z = zeros(length(x),1);
-phi = zeros(length(psi),1);
-theta = zeros(length(psi),1);
+% z = zeros(length(x),1);
+% phi = zeros(length(psi),1);
+% theta = zeros(length(psi),1);
 
 % create object 1: ship (ship1.mat)
-new_object('flypath3d_v2/ship1.mat',[x,y,z,phi,theta,psi],...
-'model','royalNavy2.mat','scale',(max(max(abs(x)),max(abs(y)))/1000),...
-'edge',[0 0 0],'face',[0 0 0],'alpha',1,...
-'path','on','pathcolor',[.89 .0 .27],'pathwidth',2);
+% new_object('flypath3d_v2/ship1.mat',[x,y,z,phi,theta,psi],...
+% 'model','royalNavy2.mat','scale',(max(max(abs(x)),max(abs(y)))/1000),...
+% 'edge',[0 0 0],'face',[0 0 0],'alpha',1,...
+% 'path','on','pathcolor',[.89 .0 .27],'pathwidth',2);
 
 % Plot trajectories 
-flypath('flypath3d_v2/ship1.mat',...
-'animate','on','step',500,...
-'axis','on','axiscolor',[0 0 0],'color',[1 1 1],...
-'font','Georgia','fontsize',12,...
-'view',[-25 35],'window',[900 900],...
-'xlim', [min(y)-0.1*max(abs(y)),max(y)+0.1*max(abs(y))],... 
-'ylim', [min(x)-0.1*max(abs(x)),max(x)+0.1*max(abs(x))], ...
-'zlim', [-max(max(abs(x)),max(abs(y)))/100,max(max(abs(x)),max(abs(y)))/20]); 
+% flypath('flypath3d_v2/ship1.mat',...
+% 'animate','on','step',500,...
+% 'axis','on','axiscolor',[0 0 0],'color',[1 1 1],...
+% 'font','Georgia','fontsize',12,...
+% 'view',[-25 35],'window',[900 900],...
+% 'xlim', [min(y)-0.1*max(abs(y)),max(y)+0.1*max(abs(y))],... 
+% 'ylim', [min(x)-0.1*max(abs(x)),max(x)+0.1*max(abs(x))], ...
+% 'zlim', [-max(max(abs(x)),max(abs(y)))/100,max(max(abs(x)),max(abs(y)))/20]); 

@@ -11,7 +11,7 @@ addpath(genpath('flypath3d_v2'))
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clc; clear; close all;
 clear WP_selector;
-T_final = 8000;	        % Final simulation time (s)
+T_final = 6000;	        % Final simulation time (s)
 h = 0.1;                % Sampling time (s)
 
 psi_ref = 0;  % desired yaw angle (rad)
@@ -54,7 +54,8 @@ P_prd = 10*eye(3);
 % MAIN LOOP
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 t = 0:h:T_final;                % Time vector
-nTimeSteps = length(t);         % Number of time steps
+nTimeSteps = length(t);
+nTimeSteps% Number of time steps
 
 simdata = zeros(nTimeSteps, 15); % Pre-allocate matrix for efficiency
 kfData = zeros(nTimeSteps, 3);
@@ -294,9 +295,9 @@ plot(t,n,t,n_c,'linewidth',2);
 title('Actual and commanded propeller speed'); xlabel('Time (s)'); ylabel('Motor speed (RPM)');
 legend('actual RPM','commanded RPM')
 subplot(313)
-plot(t,delta_deg,t,delta_c_deg,'linewidth',2);
+plot(t,delta_c_deg,t,delta_deg,'linewidth',2);
 title('Actual and commanded rudder angle'); xlabel('Time (s)'); ylabel('Angle (deg)');
-legend('actual rudder angle','commanded rudder angle')
+legend('commanded rudder angle','actual rudder angle')
 
 %% Create objects for 3-D visualization 
 % Since we only simulate 3-DOF we need to construct zero arrays for the 

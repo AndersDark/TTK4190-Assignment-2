@@ -11,7 +11,7 @@ addpath(genpath('flypath3d_v2'))
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clc; clear; close all;
 clear WP_selector;
-T_final = 1000;	        % Final simulation time (s)
+T_final = 8000;	        % Final simulation time (s)
 h = 0.1;                % Sampling time (s)
 
 psi_ref = 0;  % desired yaw angle (rad)
@@ -41,10 +41,11 @@ C = [1 0 0];
 sys = ss(A, B, C, 0);
 
 % discretized dynamics
-%[Ad, Bd] = c2d(sys, h, 'foh');
+[Ad, Bd] = c2d(sys, h, 'foh');
+
 
 % Euler discretization
-Ad = eye(3) * A*h;
+%Ad = eye(3) * A*h;
 
 x_prd = [0;0;0];
 P_prd = 10*eye(3);
@@ -105,7 +106,7 @@ for i = 1:nTimeSteps
     psi_meas = psi + normrnd(0,deg2rad(0.5));
     r_meas = x(3) + normrnd(0,deg2rad(0.1));
     rudder_meas = x(7);
-    [x_pst,P_pst,x_prd,P_prd] = kf_iteration(x_prd,P_prd,Ad,B,C,psi_meas,rudder_meas);
+    [x_pst,P_pst,x_prd,P_prd] = kf_iteration(x_prd,P_prd,Ad.A,Ad.B,Ad.C,psi_meas,rudder_meas);
     psi_est = x_pst(1);
     r_est = x_pst(2);
     bias_est = x_pst(3);
@@ -226,16 +227,6 @@ kf_bias = kfData(:,3);
 
 %% Ploting
 pathplotter(x,y)
-
-figure(8)
-figure(gcf)
-hold on;
-plot(t,kf_r*180/pi,'LineWidth',2')
-plot(t,kf_psi*180/pi,'LineStyle','--','LineWidth',2)
-title('Psi vs r');
-xlabel('Time (s)'); 
-legend('yaw rate','yaw')
-grid on;
 
 figure(7)
 figure(gcf)

@@ -3,10 +3,10 @@ function [x_pst,P_pst,x_prd,P_prd] = kf_iteration(x_prd,P_prd,Ad,Bd,Cd,psi_meas,
 persistent Q R
 if(isempty(Q))
     Q = [10 0 0;...
-         0 0.1 0;...
-         0 0 0.01];
+         0 1 0;...
+         0 0 0.1];
 
-    R = 1;
+    R = 0.5^2;
 end
 
 K = P_prd*Cd' / (Cd*P_prd*Cd' + R);

@@ -11,7 +11,7 @@ addpath(genpath('flypath3d_v2'))
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clc; clear; close all;
 clear WP_selector;
-T_final = 8000;	        % Final simulation time (s)
+T_final = 1000;	        % Final simulation time (s)
 h = 0.1;                % Sampling time (s)
 
 psi_ref = 0;  % desired yaw angle (rad)
@@ -26,6 +26,25 @@ xd = [0 0 0]';
 e_int = 0;
 Qm_0 = 0;
 x = [nu_0' eta_0' delta_0 n_0 Qm_0]'; % The state vector can be extended with addional states here
+
+
+% Kalman filter
+T = -99.4713;
+K = -0.0049;
+U_ref = 9;
+
+% Continuous time dynamics
+A = [0 1 0; 0 -1/T -K/T; 0 0 0];
+B = [0; K/T; 0];
+C = [1 0 0];
+
+sys = ss(A, B, C, 0);
+
+% discretized dynamics
+[Ad, Bd] = c2d(sys, 0.1, 'foh');
+
+x_prd = [0;0;0];
+P_prd = 100*eye(3);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % MAIN LOOP
@@ -73,6 +92,18 @@ for i = 1:nTimeSteps
     V_rw = U - V_w;
 
     tau_wind = 0;%1/2*rho_a*V_rw*[0 Ywind Nwind]';
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Part 5, 2c)
+    % Implement Kalman Filter
+    %
+    psi_meas = psi + normrnd(0,deg2rad(0.5));
+    r_meas = x(3) + normrnd(0,deg2rad(0.1));
+    rudder_meas = x(7);
+    [x_pst,P_pst,x_prd,P_prd] = kf_iteration(x_prd,P_prd,Ad.A,Ad.B,Ad.C,psi_meas,rudder_meas);
+    psi_est = x_pst(1);
+    r_est = x_pst(1);
+    bias_est = x_pst(1);
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Part 2, 2d) Add a reference model here 
@@ -113,8 +144,8 @@ for i = 1:nTimeSteps
     % The result should look like this:
     % delta_c = PID_heading(e_psi,e_r,e_int);
 
-    e_psi = ssa(x(6)-psi_d);
-    e_r   = x(3) - r_d;
+    e_psi = ssa(psi_est-psi_d);
+    e_r   = r_est - r_d;
     e_int = 0;%e_int + e_psi * h;
     delta_c = PID_heading(e_psi,e_r,e_int); % rudder angle command (rad)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

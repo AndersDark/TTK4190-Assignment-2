@@ -41,10 +41,13 @@ C = [1 0 0];
 sys = ss(A, B, C, 0);
 
 % discretized dynamics
-[Ad, Bd] = c2d(sys, 0.1, 'foh');
+%[Ad, Bd] = c2d(sys, h, 'foh');
+
+% Euler discretization
+Ad = eye(3) * A*h;
 
 x_prd = [0;0;0];
-P_prd = 100*eye(3);
+P_prd = 10*eye(3);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % MAIN LOOP
@@ -53,6 +56,8 @@ t = 0:h:T_final;                % Time vector
 nTimeSteps = length(t);         % Number of time steps
 
 simdata = zeros(nTimeSteps, 15); % Pre-allocate matrix for efficiency
+kfData = zeros(nTimeSteps, 3);
+
 wait_bar = waitbar(0, 'Starting');
 
 for i = 1:nTimeSteps
@@ -100,10 +105,11 @@ for i = 1:nTimeSteps
     psi_meas = psi + normrnd(0,deg2rad(0.5));
     r_meas = x(3) + normrnd(0,deg2rad(0.1));
     rudder_meas = x(7);
-    [x_pst,P_pst,x_prd,P_prd] = kf_iteration(x_prd,P_prd,Ad.A,Ad.B,Ad.C,psi_meas,rudder_meas);
+    [x_pst,P_pst,x_prd,P_prd] = kf_iteration(x_prd,P_prd,Ad,B,C,psi_meas,rudder_meas);
     psi_est = x_pst(1);
-    r_est = x_pst(1);
-    bias_est = x_pst(1);
+    r_est = x_pst(2);
+    bias_est = x_pst(3);
+    kfData(i,:) = [psi_est, r_est, bias_est];
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Part 2, 2d) Add a reference model here 
@@ -214,11 +220,44 @@ uc = simdata(:,14);
 vc = simdata(:,15);
 crab_angle = (180/pi) * atan2(v,u);
 sideslip_angle = (180/pi) * atan2(v-vc,u-uc);
+kf_psi = kfData(:,1);
+kf_r = kfData(:,2);
+kf_bias = kfData(:,3);
 
 %% Ploting
 pathplotter(x,y)
 
-figure(4)
+figure(8)
+figure(gcf)
+hold on;
+plot(t,kf_r*180/pi,'LineWidth',2')
+plot(t,kf_psi*180/pi,'LineStyle','--','LineWidth',2)
+title('Psi vs r');
+xlabel('Time (s)'); 
+legend('yaw rate','yaw')
+grid on;
+
+figure(7)
+figure(gcf)
+hold on;
+plot(t,kf_r*180/pi,'LineWidth',2')
+plot(t,r_deg,'LineStyle','--','LineWidth',2)
+title('Yaw rate - KF vs true');
+xlabel('Time (s)');  ylabel('Yaw rate (deg/s)'); 
+legend('KF','Ground truth')
+grid on;
+
+figure(6)
+figure(gcf)
+hold on;
+plot(t,kf_psi*180/pi,'LineWidth',2')
+plot(t,psi_deg,'LineStyle','--','LineWidth',2)
+title('Heading - KF vs true');
+xlabel('Time (s)');  ylabel('Angle (deg)'); 
+legend('KF','Ground truth')
+grid on;
+
+figure(5)
 figure(gcf)
 hold on;
 plot(t,sideslip_angle,'LineWidth',2')
@@ -228,7 +267,7 @@ xlabel('Time (s)');  ylabel('Angle (deg)');
 legend('Sideslip angle','Crab angle')
 grid on;
 
-figure(3)
+figure(4)
 figure(gcf)
 hold on;
 plot(t,psi_d_deg,'linewidth',2); % course angle desired
@@ -239,34 +278,34 @@ legend('desired course angle','course angle','Heading angle')
 grid on;
 
 
-% figure(3)
-% figure(gcf)
-% subplot(311)
-% plot(y,x,'linewidth',2); axis('equal')
-% title('North-East positions'); xlabel('(m)'); ylabel('(m)'); 
-% subplot(312)
-% plot(t,psi_deg,t,psi_d_deg,'linewidth',2);
-% title('Actual and desired yaw angle'); xlabel('Time (s)');  ylabel('Angle (deg)'); 
-% legend('actual yaw','desired yaw')
-% subplot(313)
-% plot(t,r_deg,t,r_d_deg,'linewidth',2);
-% title('Actual and desired yaw rates'); xlabel('Time (s)');  ylabel('Angle rate (deg/s)'); 
-% legend('actual yaw rate','desired yaw rate')
+figure(3)
+figure(gcf)
+subplot(311)
+plot(y,x,'linewidth',2); axis('equal')
+title('North-East positions'); xlabel('(m)'); ylabel('(m)'); 
+subplot(312)
+plot(t,psi_deg,t,psi_d_deg,'linewidth',2);
+title('Actual and desired yaw angle'); xlabel('Time (s)');  ylabel('Angle (deg)'); 
+legend('actual yaw','desired yaw')
+subplot(313)
+plot(t,r_deg,t,r_d_deg,'linewidth',2);
+title('Actual and desired yaw rates'); xlabel('Time (s)');  ylabel('Angle rate (deg/s)'); 
+legend('actual yaw rate','desired yaw rate')
 
-% figure(2)
-% figure(gcf)
-% subplot(211)
-% plot(t,u,t,u_d,'linewidth',2);
-% title('Actual and desired surge velocity'); xlabel('Time (s)'); ylabel('Velocity (m/s)');
-% legend('actual surge','desired surge')
-% subplot(212)
-% plot(t,n,t,n_c,'linewidth',2);
-% title('Actual and commanded propeller speed'); xlabel('Time (s)'); ylabel('Motor speed (RPM)');
-% legend('actual RPM','commanded RPM')
-% subplot(313)
-% plot(t,delta_deg,t,delta_c_deg,'linewidth',2);
-% title('Actual and commanded rudder angle'); xlabel('Time (s)'); ylabel('Angle (deg)');
-% legend('actual rudder angle','commanded rudder angle')
+figure(2)
+figure(gcf)
+subplot(211)
+plot(t,u,t,u_d,'linewidth',2);
+title('Actual and desired surge velocity'); xlabel('Time (s)'); ylabel('Velocity (m/s)');
+legend('actual surge','desired surge')
+subplot(212)
+plot(t,n,t,n_c,'linewidth',2);
+title('Actual and commanded propeller speed'); xlabel('Time (s)'); ylabel('Motor speed (RPM)');
+legend('actual RPM','commanded RPM')
+subplot(313)
+plot(t,delta_deg,t,delta_c_deg,'linewidth',2);
+title('Actual and commanded rudder angle'); xlabel('Time (s)'); ylabel('Angle (deg)');
+legend('actual rudder angle','commanded rudder angle')
 
 %% Create objects for 3-D visualization 
 % Since we only simulate 3-DOF we need to construct zero arrays for the 

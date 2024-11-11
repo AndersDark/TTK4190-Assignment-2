@@ -88,11 +88,14 @@ for i = 1:nTimeSteps
     % Guidance law
     [xk1,yk1,xk,yk,last_waypoint_reached] = WP_selector(x(4),x(5));
     [e_y, pi_p] = cross_track_error(xk1,yk1,xk,yk,x(4),x(5));
-    chi_d = LOS_guidance(e_y, pi_p);
+    % chi_d = LOS_guidance(e_y, pi_p);
+    chi_d = ILOS_guidance(pi_p, e_y, h);
+    psi_ref = chi_d;
+
 
     % Crab angle compensation
-    crab_angle = atan2(x(2),x(1));
-    psi_ref = chi_d - crab_angle;
+    % crab_angle = atan2(x(2),x(1));
+    % psi_ref = psi_ref - crab_angle;
 
     % Refrence model
     xd_dot = ref_model(xd,psi_ref);
